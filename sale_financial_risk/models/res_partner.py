@@ -12,7 +12,7 @@ class ResPartner(models.Model):
     risk_sale_order_limit = fields.Monetary(
         string='Limit Sales Orders', help='Set 0 if it is not locked')
     risk_sale_order = fields.Monetary(
-        compute='_compute_risk_sale_order', store=True,
+        compute='_compute_risk_sale_order',
         string='Total Sales Orders Not Invoiced',
         help='Total not invoiced of sales orders in Sale Order state')
 
