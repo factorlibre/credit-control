@@ -36,7 +36,7 @@ class SaleOrder(models.Model):
                     partner.credit_limit):
                 exception_msg = _(
                     "This sale order exceeds the financial risk.\n")
-            if exception_msg:
+            if exception_msg and partner.risk_sale_order_include:
                 return self.env['partner.risk.exceeded.wiz'].create({
                     'exception_msg': exception_msg,
                     'partner_id': partner.id,

@@ -44,11 +44,12 @@ class ResPartner(models.Model):
         for group in orders_group:
             partner = self.browse(
                 group["commercial_partner_id"][0], self._prefetch)
-            company_currency = self.env['res.company'].browse(
-                group['company_id'][0] or self.env.user.company_id.id
-            ).currency_id
-            partner.risk_sale_order = company_currency.compute(
-                group["risk_amount"], partner.risk_currency_id, round=False)
+            if partner.risk_sale_order_include:
+                company_currency = self.env['res.company'].browse(
+                    group['company_id'][0] or self.env.user.company_id.id
+                ).currency_id
+                partner.risk_sale_order = company_currency.compute(
+                    group["risk_amount"], partner.risk_currency_id, round=False)
 
     @api.model
     def _risk_field_list(self):

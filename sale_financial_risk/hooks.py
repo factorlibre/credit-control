@@ -13,6 +13,7 @@ def pre_init_hook(cr):
     of the module on an existing Odoo instance.
     """
     create_commercial_partner_id_column(cr)
+    create_risk_amount_column(cr)
 
 
 def create_commercial_partner_id_column(cr):
@@ -30,3 +31,9 @@ def create_commercial_partner_id_column(cr):
                 sol.commercial_partner_id <> p.commercial_partner_id;
         """
     )
+
+
+def create_risk_amount_column(cr):
+    if not sql.column_exists(cr, 'sale_order_line', 'risk_amount'):
+        sql.create_column(
+            cr, 'sale_order_line', 'risk_amount', 'numeric')
