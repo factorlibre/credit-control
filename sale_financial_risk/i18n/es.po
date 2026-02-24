@@ -138,5 +138,18 @@ msgstr "Total de pedidos de venta no facturados"
 msgid "Total not invoiced of sales orders in Sale Order state"
 msgstr "Total no facturado"
 
+#. module: sale_financial_risk
+#. odoo-python
+#: code:addons/sale_financial_risk/models/sale.py:0
+#, python-format
+msgid ""
+"Warning: This order has been modified increasing the client's consumed "
+"risk.\n"
+"%s"
+msgstr ""
+"Aviso: Este pedido ha sido modificado aumentando el riesgo consumido "
+"del cliente.\n"
+"%s"
+
 #~ msgid "Risk amount"
 #~ msgstr "Importe riesgo"

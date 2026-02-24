@@ -1,8 +1,12 @@
 # Copyright 2016-2020 Tecnativa - Carlos Dauden
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
+import logging
+
 from odoo import _, api, fields, models
 from odoo.tools import float_compare, float_round
+
+_logger = logging.getLogger(__name__)
 
 
 class SaleOrder(models.Model):
@@ -72,36 +76,42 @@ class SaleOrder(models.Model):
         return risk_states
 
     def write(self, vals):
-        # 1. IDENTIFICAR PEDIDOS CONFIRMADOS
+        # 1. Capture current risk totals for confirmed orders before writing
         orders_to_check = self.filtered(lambda so: so.state in self._get_risk_states())
-        old_risk_totals = {order.id: order.partner_invoice_id.commercial_partner_id.risk_total for order in orders_to_check}
-
-        
-        # 2.actualizar  líneas y recalcular riesgo
-        res = super(SaleOrder, self).write(vals)
-        # 3. VALIDAR RIESGO DESPUÉS CAMBIOS
-        warnings = []
+        old_risk_totals = {
+            order.id: order.partner_invoice_id.commercial_partner_id.risk_total
+            for order in orders_to_check
+        }
+        # 2. Perform the write (always allowed, even if risk increases)
+        res = super().write(vals)
+        # 3. Check if the risk increased and post a non-blocking warning
+        # in the chatter. Wrapped in try/except to ensure the write
+        # is never rolled back due to a message_post failure.
         for order in orders_to_check:
             partner = order.partner_invoice_id.commercial_partner_id
             new_risk_total = partner.risk_total
-            if float_compare(new_risk_total, old_risk_totals.get(order.id, 0.0), precision_digits=2) > 0:
+            old_risk = old_risk_totals.get(order.id, 0.0)
+            if float_compare(new_risk_total, old_risk, precision_digits=2) > 0:
                 exception_msg = order.with_context(
-                    current_risk_difference=(new_risk_total - old_risk_totals.get(order.id, 0.0))
+                    current_risk_difference=(new_risk_total - old_risk)
                 ).evaluate_risk_message(partner)
                 if exception_msg:
-                    msg = _(
-                            "RISK EXCEEDED: A confirmed order has been modified and saved. "
-                            "This operation increases the client's consumed risk. %s"
-                        )% (order.name, exception_msg)
-                    warnings.append(msg)
-                
-        if warnings:
-            return {
-                'warning': {
-                    'title': _("RISK EXCEEDED"),
-                    'message': "\n".join(warnings),
-                }
-            }
+                    try:
+                        order.message_post(
+                            body=_(
+                                "Warning: This order has been modified "
+                                "increasing the client's consumed risk.\n%s"
+                            )
+                            % exception_msg,
+                            message_type="notification",
+                            subtype_xmlid="mail.mt_note",
+                        )
+                    except Exception:
+                        _logger.warning(
+                            "Failed to post risk warning on order %s: %s",
+                            order.name,
+                            exception_msg,
+                        )
         return res
 
 
